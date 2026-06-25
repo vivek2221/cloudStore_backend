@@ -1,88 +1,146 @@
 import { redisClient } from "../redisClient.js";
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcrypt';
 import { generateAccessToken, generateRefreshToken, verifyToken } from "../tokensCreation.js";
 import { modelUserData } from "../mongooseSchema.js";
-import 'dotenv/config'
+import 'dotenv/config';
 
-async function newTokenAssigning(redisRefreshTokenIsExisting,refreshToken,redisClient,res){
-                refreshToken=generateRefreshToken(verifyToken(refreshToken))
-                let accessToken=generateAccessToken(verifyToken(redisClient))
-                await redisClient.del(redisRefreshTokenIsExisting)
-                await redisClient.set(refreshToken,'activeRefreshToken')
-                const folderId=await modelUserData.findOne({_id:verifyToken(accessToken).userId})
-                res.cookie('refreshToken',refreshToken,{
-                    maxAge:1000*60*60*24*7,
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'strict'
-                })
-                res.status(200).json({accessToken,mainPage:'go',folderId:folderId.parentFolderId})
+async function newTokenAssigning(redisRefreshTokenIsExisting, refreshToken, redisClient, res) {
+    const decodedRefresh = verifyToken(refreshToken);
+    if (!decodedRefresh) {
+        return res.status(401).json({ toastMessage: 'Session expired' });
+    }
+    const userId = decodedRefresh.userId;
+    const newRefreshToken = generateRefreshToken(userId);
+    const newAccessToken = generateAccessToken(userId);
 
+    await redisClient.del(redisRefreshTokenIsExisting);
+    await redisClient.set(newRefreshToken, 'activeRefreshToken', {
+        EX: 60 * 60 * 24 * 7
+    });
+
+    const user = await modelUserData.findOne({ _id: userId });
+    if (!user) {
+        return res.status(404).json({ toastMessage: 'User not found' });
+    }
+
+    res.cookie('refreshToken', newRefreshToken, {
+        maxAge: 1000 * 60 * 60 * 24 * 7,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict'
+    });
+
+    return res.status(200).json({
+        accessToken: newAccessToken,
+        mainPage: 'go',
+        folderId: user.parentFolderId,
+        name: user.name,
+        email: user.email
+    });
 }
 
-async function LoginIn(password,email,res){
-        const User=await modelUserData.findOne({email})
-        if(User){
-         const isEqual=await bcrypt.compare(password,User?.password)
-        
-         if(isEqual){
-            let accessToken=generateAccessToken(User._id)
-            let refreshToken=generateRefreshToken(User._id)
-            await redisClient.set(refreshToken,'refreshToken')
-            res.cookie('refreshToken',refreshToken,{
-                maxAge:1000*60*60*24*7,
+async function LoginIn(password, email, res) {
+    const User = await modelUserData.findOne({ email });
+    if (User) {
+        const isEqual = await bcrypt.compare(password, User.password);
+        if (isEqual) {
+            let accessToken = generateAccessToken(User._id);
+            let refreshToken = generateRefreshToken(User._id);
+            await redisClient.set(refreshToken, 'refreshToken', {
+                EX: 60 * 60 * 24 * 7
+            });
+            res.cookie('refreshToken', refreshToken, {
+                maxAge: 1000 * 60 * 60 * 24 * 7,
                 httpOnly: true,
                 secure: true,
                 sameSite: 'strict'
-            })
+            });
             
-           return res.status(200).json({accessToken,mainPage:'go',folderId:User.parentFolderId})
-         }
-         else{
-           return res.status(401).json({toastMessage:'invalid credentials'})
-         }
+            return res.status(200).json({
+                accessToken,
+                mainPage: 'go',
+                folderId: User.parentFolderId,
+                name: User.name,
+                email: User.email
+            });
+        } else {
+            return res.status(401).json({ toastMessage: 'invalid credentials' });
         }
-        else{
-          return  res.status(401).json({toastMessage:'invalid credentials'})
-        }
-        }
-
-export const login = async (req,res) =>{
-    let refreshToken=req.cookies?.refreshToken;
-    let {email,password,accessToken}=req.body
-     if(refreshToken || accessToken){
-        if(refreshToken){
-           const redisRefreshTokenIsExisting = await redisClient.get(refreshToken)
-     if(redisRefreshTokenIsExisting){
-        if(accessToken){
-           const isValidAccessToken = verifyToken(accessToken);
-           if(isValidAccessToken){
-            res.status(200).json({mainPage:'go'})
-           }
-           else{
-               return await newTokenAssigning(redisRefreshTokenIsExisting,refreshToken,redisClient,res)
-           }
-        }
-        else{
-                return await newTokenAssigning(redisRefreshTokenIsExisting,refreshToken,redisClient,res)
-        }
-     }
-     else{
-     await LoginIn(password,email,res)
-     }
-        }
-        else{
-            const isValidAccessToken = verifyToken(accessToken);
-           if(isValidAccessToken){
-            res.status(200).json({mainPage:'go'})
-           }
-           else{
-           await LoginIn(password,email,res)
-           }
-        }
-     
-    }
-    else{
-     await LoginIn(password,email,res)
+    } else {
+        return res.status(401).json({ toastMessage: 'invalid credentials' });
     }
 }
+
+export const login = async (req, res) => {
+    let refreshToken = req.cookies?.refreshToken;
+    let { email, password, accessToken } = req.body;
+    
+    if (refreshToken || accessToken) {
+        if (refreshToken) {
+            const redisRefreshTokenIsExisting = await redisClient.get(refreshToken);
+            if (redisRefreshTokenIsExisting) {
+                if (accessToken) {
+                    const isValidAccessToken = verifyToken(accessToken);
+                    if (isValidAccessToken) {
+                        const User = await modelUserData.findOne({ _id: isValidAccessToken.userId });
+                        if (User) {
+                            return res.status(200).json({
+                                accessToken,
+                                mainPage: 'go',
+                                folderId: User.parentFolderId,
+                                name: User.name,
+                                email: User.email
+                            });
+                        } else {
+                            return await LoginIn(password, email, res);
+                        }
+                    } else {
+                        return await newTokenAssigning(redisRefreshTokenIsExisting, refreshToken, redisClient, res);
+                    }
+                } else {
+                    return await newTokenAssigning(redisRefreshTokenIsExisting, refreshToken, redisClient, res);
+                }
+            } else {
+                return await LoginIn(password, email, res);
+            }
+        } else {
+            const isValidAccessToken = verifyToken(accessToken);
+            if (isValidAccessToken) {
+                const User = await modelUserData.findOne({ _id: isValidAccessToken.userId });
+                if (User) {
+                    return res.status(200).json({
+                        accessToken,
+                        mainPage: 'go',
+                        folderId: User.parentFolderId,
+                        name: User.name,
+                        email: User.email
+                    });
+                } else {
+                    return await LoginIn(password, email, res);
+                }
+            } else {
+                return await LoginIn(password, email, res);
+            }
+        }
+    } else {
+        return await LoginIn(password, email, res);
+    }
+};
+
+export const logout = async (req, res) => {
+    try {
+        const refreshToken = req.cookies?.refreshToken;
+        if (refreshToken) {
+            await redisClient.del(refreshToken);
+        }
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'strict'
+        });
+        return res.status(200).json({ message: "Logged out successfully" });
+    } catch (err) {
+        console.error("Error in logout:", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};

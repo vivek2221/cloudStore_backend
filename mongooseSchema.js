@@ -17,6 +17,10 @@ connect()
        parentFolderId:mongoose.Types.ObjectId
     });
     const folders=new mongoose.Schema({
+        folderName:{
+            type:String,
+            default:'New Folder'
+        },
         parentFolderId:{
             type:mongoose.Types.ObjectId,
             default:null
@@ -45,10 +49,17 @@ connect()
     const files=new mongoose.Schema(
         {
             fileName:String,
+            fileSize:String,
+            fileSizeBytes:Number,
             parentFolderId:mongoose.Types.ObjectId,
             userId:mongoose.Types.ObjectId,
-            deleted:Boolean,
+            deleted:{
+                type:Boolean,
+                default:false
+            },
             modifiedDate:Date,
+            diskPath:String,
+            mimeType:String
         }
     )
     const modelUserData=mongoose.model('userSchema',userSchema);

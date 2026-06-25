@@ -15,7 +15,9 @@ async function rateLimiter(req,res,next,key,limitNumber,errorMessage,timeToRefre
       console.log('error in redis - ',err.message)
       
     }finally{
-     next()
+      if (!res.headersSent) {
+          next();
+      }
     }
 }
 const rateLimiterForRegister=async (req,res,next)=>{
