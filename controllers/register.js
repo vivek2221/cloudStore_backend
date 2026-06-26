@@ -19,7 +19,7 @@ export const register = async (req,res)=>{
         secure: process.env.COOKIE_SECURE === 'true',
         sameSite: process.env.COOKIE_SAME_SITE || 'strict'
 	})
-	redisClient.set(refreshToken,'refreshTokenType',{
+	await redisClient.set(refreshToken,'refreshTokenType',{
 		EX: 60 * 60 * 24 * 7
 	});
     res.json({accessToken:accessToken,mainPage:'go',name:name,folderId:folderMain._id});

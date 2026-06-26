@@ -21,10 +21,10 @@ async function rateLimiter(req,res,next,key,limitNumber,errorMessage,timeToRefre
     }
 }
 const rateLimiterForRegister=async (req,res,next)=>{
-    rateLimiter(req,res,next,'rate_limit_register',5,'too many request for register try after 1 hour',3600)
+    await rateLimiter(req,res,next,'rate_limit_register',5,'too many request for register try after 1 hour',3600)
 }
 const rateLimiterForLogin=async (req,res,next)=>{
-    rateLimiter(req,res,next,'rate_limit_login',50,'too many request for login try after 15 minutes',900)
+    await rateLimiter(req,res,next,'rate_limit_login',50,'too many request for login try after 15 minutes',900)
 }
 export {
     rateLimiterForLogin,

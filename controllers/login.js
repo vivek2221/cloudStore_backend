@@ -4,7 +4,7 @@ import { generateAccessToken, generateRefreshToken, verifyToken } from "../token
 import { modelUserData } from "../mongooseSchema.js";
 import 'dotenv/config';
 
-async function newTokenAssigning(redisRefreshTokenIsExisting, refreshToken, redisClient, res) {
+async function newTokenAssigning(refreshToken, redisClient, res) {
     const decodedRefresh = verifyToken(refreshToken);
     if (!decodedRefresh) {
         return res.status(401).json({ toastMessage: 'Session expired' });
@@ -13,7 +13,7 @@ async function newTokenAssigning(redisRefreshTokenIsExisting, refreshToken, redi
     const newRefreshToken = generateRefreshToken(userId);
     const newAccessToken = generateAccessToken(userId);
 
-    await redisClient.del(redisRefreshTokenIsExisting);
+    await redisClient.del(refreshToken);
     await redisClient.set(newRefreshToken, 'activeRefreshToken', {
         EX: 60 * 60 * 24 * 7
     });
@@ -95,10 +95,10 @@ export const login = async (req, res) => {
                             return await LoginIn(password, email, res);
                         }
                     } else {
-                        return await newTokenAssigning(redisRefreshTokenIsExisting, refreshToken, redisClient, res);
+                        return await newTokenAssigning(refreshToken, redisClient, res);
                     }
                 } else {
-                    return await newTokenAssigning(redisRefreshTokenIsExisting, refreshToken, redisClient, res);
+                    return await newTokenAssigning(refreshToken, redisClient, res);
                 }
             } else {
                 return await LoginIn(password, email, res);
