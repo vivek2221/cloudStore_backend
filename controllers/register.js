@@ -16,8 +16,8 @@ export const register = async (req,res)=>{
 	res.cookie('refreshToken',refreshToken,{
 		maxAge:1000*60*60*24*7,
 		httpOnly: true,
-        secure: true,
-        sameSite: 'strict'
+        secure: process.env.COOKIE_SECURE === 'true',
+        sameSite: process.env.COOKIE_SAME_SITE || 'strict'
 	})
 	redisClient.set(refreshToken,'refreshTokenType',{
 		EX: 60 * 60 * 24 * 7

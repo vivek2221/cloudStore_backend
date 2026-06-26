@@ -1,8 +1,9 @@
+import 'dotenv/config';
 import mongoose from 'mongoose'
 
 async function connect(){
    try{
-       await mongoose.connect("mongodb://localhost:27017/cloudAppStorage?replicaset=replica")
+       await mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/cloudAppStorage?replicaset=replica")
    }catch(err){
        console.log('this error had occured',err.message)
        process.exit(1);

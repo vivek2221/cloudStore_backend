@@ -26,8 +26,8 @@ async function newTokenAssigning(redisRefreshTokenIsExisting, refreshToken, redi
     res.cookie('refreshToken', newRefreshToken, {
         maxAge: 1000 * 60 * 60 * 24 * 7,
         httpOnly: true,
-        secure: true,
-        sameSite: 'strict'
+        secure: process.env.COOKIE_SECURE === 'true',
+        sameSite: process.env.COOKIE_SAME_SITE || 'strict'
     });
 
     return res.status(200).json({
@@ -52,8 +52,8 @@ async function LoginIn(password, email, res) {
             res.cookie('refreshToken', refreshToken, {
                 maxAge: 1000 * 60 * 60 * 24 * 7,
                 httpOnly: true,
-                secure: true,
-                sameSite: 'strict'
+                secure: process.env.COOKIE_SECURE === 'true',
+                sameSite: process.env.COOKIE_SAME_SITE || 'strict'
             });
             
             return res.status(200).json({
@@ -135,8 +135,8 @@ export const logout = async (req, res) => {
         }
         res.clearCookie('refreshToken', {
             httpOnly: true,
-            secure: true,
-            sameSite: 'strict'
+            secure: process.env.COOKIE_SECURE === 'true',
+            sameSite: process.env.COOKIE_SAME_SITE || 'strict'
         });
         return res.status(200).json({ message: "Logged out successfully" });
     } catch (err) {

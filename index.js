@@ -13,7 +13,7 @@ const server = express();
 const PORT = 2000;
 
 server.use(cors({
-	origin: 'http://localhost:5173',
+	origin: process.env.UI_URL || 'http://localhost:5173',
 	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 	credentials: true,
 }));
