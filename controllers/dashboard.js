@@ -1,6 +1,8 @@
 import { verifyToken } from '../tokensCreation.js';
 import { modelFilesData, modelFoldersData, modelUserData } from '../mongooseSchema.js';
 import fs from 'fs';
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { s3Client, bucketName } from '../s3Client.js';
 
 export const getTrash = async (req, res) => {
     try {
@@ -158,12 +160,29 @@ export const permanentDeleteItem = async (req, res) => {
             const folder = await modelFoldersData.findOne({ _id: itemId, userId });
             if (!folder) return res.status(404).json({ error: "Folder not found" });
 
+            const deletePhysicalFile = async (f) => {
+                if (f.s3Key) {
+                    try {
+                        await s3Client.send(new DeleteObjectCommand({
+                            Bucket: bucketName,
+                            Key: f.s3Key
+                        }));
+                    } catch (err) {
+                        console.error(`Error deleting file ${f.s3Key} from S3:`, err);
+                    }
+                } else if (f.diskPath && fs.existsSync(f.diskPath)) {
+                    try {
+                        fs.unlinkSync(f.diskPath);
+                    } catch (e) {
+                        console.error(`Error deleting local file ${f.diskPath}:`, e);
+                    }
+                }
+            };
+
             const deleteFolderPhysicalRecursive = async (fid) => {
                 const filesToDelete = await modelFilesData.find({ parentFolderId: fid, userId });
                 for (const f of filesToDelete) {
-                    if (f.diskPath && fs.existsSync(f.diskPath)) {
-                        try { fs.unlinkSync(f.diskPath); } catch(e) {}
-                    }
+                    await deletePhysicalFile(f);
                     await modelFilesData.deleteOne({ _id: f._id });
                 }
 
@@ -182,9 +201,26 @@ export const permanentDeleteItem = async (req, res) => {
             const file = await modelFilesData.findOne({ _id: itemId, userId });
             if (!file) return res.status(404).json({ error: "File not found" });
 
-            if (file.diskPath && fs.existsSync(file.diskPath)) {
-                try { fs.unlinkSync(file.diskPath); } catch(e) {}
-            }
+            const deletePhysicalFile = async (f) => {
+                if (f.s3Key) {
+                    try {
+                        await s3Client.send(new DeleteObjectCommand({
+                            Bucket: bucketName,
+                            Key: f.s3Key
+                        }));
+                    } catch (err) {
+                        console.error(`Error deleting file ${f.s3Key} from S3:`, err);
+                    }
+                } else if (f.diskPath && fs.existsSync(f.diskPath)) {
+                    try {
+                        fs.unlinkSync(f.diskPath);
+                    } catch (e) {
+                        console.error(`Error deleting local file ${f.diskPath}:`, e);
+                    }
+                }
+            };
+
+            await deletePhysicalFile(file);
             await modelFilesData.deleteOne({ _id: itemId, userId });
 
             return res.status(200).json({ message: "File permanently deleted" });

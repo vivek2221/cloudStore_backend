@@ -4,23 +4,13 @@ import fs from 'fs';
 import { verifyToken } from '../tokensCreation.js';
 import { modelFilesData, modelFoldersData } from '../mongooseSchema.js';
 import jwt from 'jsonwebtoken';
+import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { s3Client, bucketName } from '../s3Client.js';
 
 const privateKey = fs.readFileSync('./private.pem', 'utf8');
 
 // Configure multer storage
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const dir = './allDocs';
-        if (!fs.existsSync(dir)){
-            fs.mkdirSync(dir, { recursive: true });
-        }
-        cb(null, dir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
+const storage = multer.memoryStorage();
 
 export const upload = multer({ storage });
 
@@ -58,9 +48,20 @@ export const uploadFile = async (req, res) => {
             deleted: false
         });
         if (duplicate) {
-            fs.unlinkSync(req.file.path);
             return res.status(400).json({ error: "File with this name already exists in this folder" });
         }
+
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const s3Key = `uploads/${userId}/${uniqueSuffix}${path.extname(req.file.originalname)}`;
+
+        const uploadParams = {
+            Bucket: bucketName,
+            Key: s3Key,
+            Body: req.file.buffer,
+            ContentType: req.file.mimetype
+        };
+
+        await s3Client.send(new PutObjectCommand(uploadParams));
 
         const newFile = await modelFilesData.create({
             fileName: req.file.originalname,
@@ -70,7 +71,8 @@ export const uploadFile = async (req, res) => {
             userId,
             deleted: false,
             modifiedDate: new Date(),
-            diskPath: req.file.path,
+            diskPath: s3Key,
+            s3Key,
             mimeType: req.file.mimetype
         });
 
@@ -106,14 +108,30 @@ export const downloadFile = async (req, res) => {
         const file = await getFileFromToken(fileId, token);
         if (!file) return res.status(404).json({ error: "File not found or unauthorized" });
 
-        const resolvedPath = path.resolve(file.diskPath);
-        if (!fs.existsSync(resolvedPath)) {
-            return res.status(404).json({ error: "Physical file not found on server disk" });
-        }
-
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
         res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
-        return res.sendFile(resolvedPath);
+
+        if (file.s3Key) {
+            try {
+                const command = new GetObjectCommand({
+                    Bucket: bucketName,
+                    Key: file.s3Key
+                });
+                const s3Response = await s3Client.send(command);
+                s3Response.Body.pipe(res);
+            } catch (s3Err) {
+                console.error("Error fetching file from S3:", s3Err);
+                if (!res.headersSent) {
+                    res.status(500).json({ error: "Failed to retrieve file from S3 storage" });
+                }
+            }
+        } else {
+            const resolvedPath = path.resolve(file.diskPath);
+            if (!fs.existsSync(resolvedPath)) {
+                return res.status(404).json({ error: "Physical file not found on server disk" });
+            }
+            return res.sendFile(resolvedPath);
+        }
     } catch (error) {
         console.error("Error in downloadFile:", error);
         return res.status(500).json({ error: "Internal server error" });
@@ -130,14 +148,30 @@ export const viewFile = async (req, res) => {
         const file = await getFileFromToken(fileId, token);
         if (!file) return res.status(404).json({ error: "File not found or unauthorized" });
 
-        const resolvedPath = path.resolve(file.diskPath);
-        if (!fs.existsSync(resolvedPath)) {
-            return res.status(404).json({ error: "Physical file not found on server disk" });
-        }
-
         res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.fileName)}"`);
         res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
-        return res.sendFile(resolvedPath);
+
+        if (file.s3Key) {
+            try {
+                const command = new GetObjectCommand({
+                    Bucket: bucketName,
+                    Key: file.s3Key
+                });
+                const s3Response = await s3Client.send(command);
+                s3Response.Body.pipe(res);
+            } catch (s3Err) {
+                console.error("Error fetching file from S3:", s3Err);
+                if (!res.headersSent) {
+                    res.status(500).json({ error: "Failed to retrieve file from S3 storage" });
+                }
+            }
+        } else {
+            const resolvedPath = path.resolve(file.diskPath);
+            if (!fs.existsSync(resolvedPath)) {
+                return res.status(404).json({ error: "Physical file not found on server disk" });
+            }
+            return res.sendFile(resolvedPath);
+        }
     } catch (error) {
         console.error("Error in viewFile:", error);
         return res.status(500).json({ error: "Internal server error" });

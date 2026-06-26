@@ -59,6 +59,7 @@ connect()
             },
             modifiedDate:Date,
             diskPath:String,
+            s3Key:String,
             mimeType:String
         }
     )
