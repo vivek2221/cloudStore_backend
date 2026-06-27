@@ -47,7 +47,8 @@ server.get('/recentFiles', getRecentFiles);
 server.put('/restoreItem', restoreItem);
 server.delete('/permanentDeleteItem', permanentDeleteItem);
 
-//git actionRoutefor running ./bash.sh script
+//git actionRoutefor running ./bash.sh script checking 
+console.log('checking ')
 server.post('/webhook', (req, res) => {
     // Check if the push event happened on the main branch
     const ref = req.body.ref;
