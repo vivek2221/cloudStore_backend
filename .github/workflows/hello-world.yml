@@ -7,7 +7,16 @@ jobs:
   say-hello:
     runs-on: ubuntu-latest
     steps:
-      - name: print a welcome message
-        run: echo "git action is running properly "
-      - name: show the current time 
-        run: date
+      - name: checkout code
+        uses: actions/checkout@v4 
+      - name: executing remote ssh command 
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+         host: ${{ secrets.EC2_HOST }}
+         username: ${{ secrets.EC2@_USER }}
+         key: ${{ secrets.EC2_SSH_KEY }}
+         script: |
+            cd /home/ubuntu/cloudStore_backend
+            git pull
+            npm install
+            pm2 start ecosystem.config.cjs
