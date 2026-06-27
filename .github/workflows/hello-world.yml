@@ -19,4 +19,22 @@ jobs:
             cd /home/ubuntu/cloudStore_backend
             git pull
             npm install
-            pm2 start ecosystem.config.cjs
+            pm2 restart ecosystem.config.cjs
+      - name: Notify on Failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          subject: "GitHub action failed : ${{ github.repository }}"
+          to: vshekhawat136@gmail.com
+          from: GitHub Actions Alert
+          body: |
+             the ci/cd pipeline failed on branch ${{ github.ref_name }},
+             Commit: ${{ github.sha }}
+             Author: ${{ github.actor }}
+
+
+             View details here: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
