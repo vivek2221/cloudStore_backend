@@ -1,0 +1,13 @@
+name : my first git action work
+on :
+  push :
+    branches: [main]
+
+jobs:
+  say-hello:
+    runs-on : ubuntu-latest
+    steps:
+      -name: print a welcome message
+       run: echo "git action is running properly "
+      -name: show the current time 
+       run : date
