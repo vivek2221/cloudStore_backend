@@ -22,7 +22,7 @@ jobs:
             pm2 restart ecosystem.config.cjs
       - name: Notify on Failure
         if: failure()
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@v4
         with:
           server_address: smtp.gmail.com
           server_port: 465
@@ -40,7 +40,7 @@ jobs:
              View details here: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - name: Notify on Success
         if: success()
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@v4
         with:
           server_address: smtp.gmail.com
           server_port: 465
