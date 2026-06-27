@@ -13,7 +13,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
          host: ${{ secrets.EC2_HOST }}
-         username: ${{ secrets.EC2@_USER }}
+         username: ${{ secrets.EC2_USER }}
          key: ${{ secrets.EC2_SSH_KEY }}
          script: |
             cd /home/ubuntu/cloudStore_backend
