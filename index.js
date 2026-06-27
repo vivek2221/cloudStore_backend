@@ -74,4 +74,9 @@ server.post('/webhook', (req, res) => {
 });
 server.listen(PORT, () => {
     console.log(`server started on port ${PORT}`);
+    if(process.send){
+        if (process.send) {
+        process.send('ready');
+    }
+    }
 });
