@@ -8,6 +8,7 @@ import { login, logout } from "./controllers/login.js";
 import { allFolders, createFolder, renameFolder, deleteFolder } from "./controllers/folders.js";
 import { upload, uploadFile, downloadFile, viewFile, renameFile, deleteFile, shareFile } from "./controllers/files.js";
 import { getTrash, getRecentFiles, restoreItem, permanentDeleteItem } from "./controllers/dashboard.js";
+import { exec } from 'child_process';
 
 const server = express();
 const PORT = 2000;
@@ -46,6 +47,30 @@ server.get('/recentFiles', getRecentFiles);
 server.put('/restoreItem', restoreItem);
 server.delete('/permanentDeleteItem', permanentDeleteItem);
 
+//git actionRoutefor running ./bash script
+server.post('/webhook', (req, res) => {
+    // Check if the push event happened on the main branch
+    const ref = req.body.ref;
+    
+    if (ref === 'refs/heads/main') {
+        console.log('🚀 Push event detected on main branch. Triggering deployment...');
+
+        // Execute our deployment bash script
+        exec('/home/ubuntu/deploy.sh', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`❌ Deployment Error: ${error.message}`);
+                return res.status(500).send('Deployment failed');
+            }
+            if (stderr) {
+                console.error(`⚠️ Script Stderr: ${stderr}`);
+            }
+            console.log(`✅ Script Stdout:\n${stdout}`);
+            return res.status(200).send('Deployment successful');
+        });
+    } else {
+        res.status(200).send('Ignored: Not the main branch.');
+    }
+});
 server.listen(PORT, () => {
     console.log(`server started on port ${PORT}`);
 });
