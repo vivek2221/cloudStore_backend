@@ -38,3 +38,22 @@ jobs:
 
 
              View details here: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Notify on Success
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          subject: "🚀 Deployment Successful: ${{ github.repository }}"
+          to: vshekhawat136@gmail.com
+          from: GitHub Actions Alert
+          body: |
+            Great news! The CI/CD pipeline successfully deployed your latest changes to EC2.
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            View run details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
