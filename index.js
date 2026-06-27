@@ -56,6 +56,7 @@ server.post('/webhook', (req, res) => {
         console.log('🚀 Push event detected on main branch. Triggering deployment...');
 
         // Execute our deployment bash script
+        console.log("done RUnning")
         exec('/home/ubuntu/deploy.sh', (error, stdout, stderr) => {
             if (error) {
                 console.error(`❌ Deployment Error: ${error.message}`);
