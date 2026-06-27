@@ -1,5 +1,5 @@
 export default {
-    server: [
+    app: [
         {
           name:"serverMain",
           script:"index.js",
