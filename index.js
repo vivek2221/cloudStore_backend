@@ -4,7 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { rateLimiterForLogin, rateLimiterForRegister } from "./redisRateLimiter.js";
 import { register } from "./controllers/register.js";
-import { login, logout } from "./controllers/login.js";
+import { login, logout, googleLogin } from "./controllers/login.js";
 import { allFolders, createFolder, renameFolder, deleteFolder } from "./controllers/folders.js";
 import { upload, uploadFile, downloadFile, viewFile, renameFile, deleteFile, shareFile } from "./controllers/files.js";
 import { getTrash, getRecentFiles, restoreItem, permanentDeleteItem } from "./controllers/dashboard.js";
@@ -25,6 +25,7 @@ server.use(express.json());
 // Auth routes
 server.put('/register', rateLimiterForRegister, register);
 server.put('/login', rateLimiterForLogin, login);
+server.put('/google-login', googleLogin);
 server.put('/logout', logout);
 
 // Folder routes

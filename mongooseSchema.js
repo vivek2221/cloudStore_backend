@@ -15,6 +15,7 @@ connect()
        name : String,
        email : String,
        password: String,
+       sub: String,
        parentFolderId:mongoose.Types.ObjectId
     });
     const folders=new mongoose.Schema({
