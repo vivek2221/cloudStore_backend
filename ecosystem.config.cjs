@@ -1,8 +1,9 @@
-export default {
+module.exports={
     apps: [
         {
           name:"serverMain",
           script:"index.js",
+          cwd:"/home/ubuntu/cloudStore_backend",
           instances:"max",
           exec_mode:"cluster",
           wait_ready:true,
