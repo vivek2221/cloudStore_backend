@@ -1,7 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3';
 
 const clientConfig = {
-    region: process.env.AWS_REGION || 'eu-north-1'
+    region: process.env.AWS_REGION || 'ap-south-1'
 };
 
 // If keys are provided in .env, use them. Otherwise, let AWS SDK check instance IAM role.
